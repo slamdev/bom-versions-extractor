@@ -1,0 +1,130 @@
+plugins {
+    id 'idea'
+    id 'java-library'
+    id 'maven-publish'
+    id 'pmd'
+    id 'checkstyle'
+    id 'com.github.spotbugs' version '4.6.0'
+    id 'com.github.johnrengelman.shadow' version '7.1.0'
+}
+
+group 'com.github.slamdev.bomversionsextractor'
+
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
+
+compileJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-Xlint:unchecked' << '-Xlint:deprecation' << '-Werror'
+}
+
+compileTestJava {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-Xlint:unchecked' << '-Xlint:deprecation' << '-Werror'
+}
+
+repositories {
+    mavenCentral()
+}
+
+pmd {
+    toolVersion = '6.29.0'
+    ignoreFailures = false
+    consoleOutput = false
+}
+
+tasks.withType(Pmd) {
+    if (name == 'pmdMain') {
+        source = 'src/main/java'
+        ruleSetFiles = files('gradle/lint/pmd/ruleSetMain.xml')
+        ruleSets = []
+    } else {
+        ruleSetFiles = files('gradle/lint/pmd/ruleSetTest.xml')
+        ruleSets = []
+    }
+}
+
+checkstyle {
+    toolVersion = '8.37'
+    ignoreFailures = false
+    showViolations = false
+}
+
+tasks.withType(Checkstyle) {
+    if (name == 'checkstyleMain') {
+        source = 'src/main/java'
+        configFile = file('gradle/lint/checkstyle/checkstyleMain.xml')
+    } else {
+        configFile = file('gradle/lint/checkstyle/checkstyleTest.xml')
+    }
+    exclude '**/api/**'
+    exclude '**/stream/**'
+}
+
+spotbugs {
+    toolVersion = '4.1.4'
+    ignoreFailures = false
+    effort = 'max'
+    reportLevel = 'low'
+}
+
+tasks.withType(VerificationTask) {
+    if (name.startsWith('spotbugs')) {
+        if (name == 'spotbugsMain') {
+            excludeFilter = file('gradle/lint/findbugs/excludeMain.xml')
+        } else {
+            excludeFilter = file('gradle/lint/findbugs/excludeTest.xml')
+        }
+        reports {
+            xml.enabled = false
+            html.enabled = true
+        }
+    }
+}
+
+dependencies {
+    implementation 'org.slf4j:slf4j-simple:1.7.32'
+    implementation 'info.picocli:picocli:4.6.1'
+    implementation 'org.json:json:20210307'
+    implementation "org.apache.maven:maven-resolver-provider:3.8.3"
+    def resolverVersion = "1.6.3"
+    implementation "org.apache.maven.resolver:maven-resolver-connector-basic:${resolverVersion}"
+    implementation "org.apache.maven.resolver:maven-resolver-transport-file:${resolverVersion}"
+    implementation "org.apache.maven.resolver:maven-resolver-transport-http:${resolverVersion}"
+    checkstyle 'com.thomasjensen.checkstyle.addons:checkstyle-addons:6.0.1'
+    checkstyle 'com.github.sevntu-checkstyle:sevntu-checks:1.38.0'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'com.github.slamdev.bomversionsextractor.Application'
+    }
+}
+
+configurations.archives.artifacts.clear()
+artifacts {
+    archives tasks.shadowJar
+}
+
+shadowJar {
+    archiveClassifier.set('')
+    mergeServiceFiles()
+}
+
+publishing {
+    publications {
+        shadow(MavenPublication) { publication ->
+            project.shadow.component(publication)
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/slamdev/bom-versions-extractor")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
+                password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}
