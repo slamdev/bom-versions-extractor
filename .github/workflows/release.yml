@@ -13,15 +13,10 @@ jobs:
       - uses: actions/setup-java@v1
         with:
           java-version: 11
-      - run: |
-          echo "version=${GITHUB_REF##*/}" >> gradle.properties
       - uses: eskatos/gradle-command-action@v1
-        env:
-          GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           dependencies-cache-enabled: true
-          arguments: publish
+          arguments: shadowJar
       - uses: softprops/action-gh-release@v1
         with:
           files: build/libs/bom-versions-extractor.jar
