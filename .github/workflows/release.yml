@@ -22,3 +22,7 @@ jobs:
         with:
           dependencies-cache-enabled: true
           arguments: publish
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: build/libs/bom-versions-extractor.jar
+          fail_on_unmatched_files: true
