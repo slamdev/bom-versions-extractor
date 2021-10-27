@@ -4,6 +4,7 @@ import org.json.JSONArray;
 import picocli.CommandLine;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -38,7 +39,7 @@ public class Application implements Runnable {
             List<ArtifactInfo> artifacts = e.run();
             JSONArray json = new JSONArray(artifacts);
             if (outFile.isPresent()) {
-                Files.writeString(outFile.get(), json.toString());
+                Files.write(outFile.get(), json.toString().getBytes(StandardCharsets.UTF_8));
             } else {
                 System.out.println(json.toString(2));
             }
